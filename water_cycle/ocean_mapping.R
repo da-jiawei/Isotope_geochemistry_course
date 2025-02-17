@@ -19,7 +19,7 @@ theme = theme(axis.text.x = element_text(margin = margin(t = 0.1, unit = "cm")),
 # ocean isotopes ----
 #Schmidt, G.A., G. R. Bigg and E. J. Rohling. 1999. "Global Seawater Oxygen-18 Database - v1.22" 
 #https://data.giss.nasa.gov/o18data/
-ocean = read_csv("data/ocean_isotope.csv")
+ocean = read_csv("water_cycle/data/ocean_isotope.csv")
 ocean = ocean[, 1:10]
 ocean = ocean %>%
   mutate(dD = na_if(dD, "**")) %>%

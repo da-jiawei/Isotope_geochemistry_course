@@ -15,9 +15,9 @@ theme = theme(axis.text.x = element_text(margin = margin(t = 0.1, unit = "cm")),
               legend.title = element_text(size = 12),
               panel.grid.minor = element_blank(),
               panel.grid.major = element_blank())
-source("constants_coefficients.R")
+source("water_cycle/constants_coefficients.R")
 
-ocean = read_csv("data/ocean_isotope.csv")
+ocean = read_csv("water_cycle/data/ocean_isotope.csv")
 ocean = ocean[, 1:10]
 ocean = ocean %>%
   mutate(dD = na_if(dD, "**")) %>%
@@ -30,6 +30,7 @@ Med = ocean %>%
   mutate(d.excess = dD - d18O * 8)
 ggplot(Med, aes(x = d18O, y = d.excess, fill = Longitude)) +
   geom_point(shape = 21, size = 3) +
+  scale_fill_viridis_c() +
   theme_bw() + theme +
   labs(x = expression(delta^"18"*"O (\u2030)"),
        y = expression("d-excess (\u2030)"))
@@ -81,60 +82,4 @@ Medi_numerical = function(temp, w, h, n, duration){
   #   geom_line(aes(x = time, y = d18v), color = "dodgerblue2") +
   #   theme_bw()
 }
-Medi_numerical(20, 0, 0.5, 10, 1e5)
-
-# analytical ----
-ctrl = function(){
-  vars = list(
-    "temp" = 15,
-    "w" = 1,
-    "h" = 0.5,
-    "u" = 15 # F_in = u * E
-  )
-}
-medi = function(vars){
-  list2env(vars, environment())
-  alpha18_diff = w * diffratio_18 + (1-w) 
-  alpha2_diff = w * diffratio_2 + (1-w) 
-  alpha_eq(temp)
-  m18 = 1 / (alpha18_l_v * alpha18_diff * (1 - h) + alpha18_l_v * h)
-  m2 = 1 / (alpha2_l_v * alpha2_diff * (1 - h) + alpha2_l_v * h)
-  d18l = 1000 * (1 - m18) / (u - 1 + m18)
-  d2l = 1000 * (1 - m2) / (u - 1 + m2)
-  d_excess = d2l - 8 * d18l
-  results = data.frame("temp" = rep(temp), "w" = rep(w), "RH" = rep(h*100), "f" = rep(u),
-                       "d18l" = rep(d18l), "d2l" = rep(d2l), "d.excess" = rep(d_excess))
-}
-
-vars = ctrl()
-vars$u = seq(10, 20, 2)
-sens = medi(vars)
-ggplot(Med, aes(x = d18O, y = d.excess)) +
-  geom_point(color = "gray") +
-  geom_point(data = sens, aes(x = d18l, y = d.excess, fill = f), shape = 21, size = 3) +
-  scale_fill_distiller(palette = "RdBu") +
-  theme_bw() + theme +
-  labs(x = expression(delta^"18"*"O (\u2030)"),
-       y = expression("d-excess (\u2030)"))
-
-vars = ctrl()
-vars$w = seq(0, 1, 0.1)
-sens = medi(vars)
-ggplot(Med, aes(x = d18O, y = d.excess)) +
-  geom_point(color = "gray") +
-  geom_point(data = sens, aes(x = d18l, y = d.excess, fill = w), shape = 21, size = 3) +
-  scale_fill_distiller(palette = "RdBu") +
-  theme_bw() + theme +
-  labs(x = expression(delta^"18"*"O (\u2030)"),
-       y = expression("d-excess (\u2030)"))
-
-vars = ctrl()
-vars$h = seq(0.1, 0.9, 0.1)
-sens = medi(vars)
-ggplot(Med, aes(x = d18O, y = d.excess)) +
-  geom_point(color = "gray") +
-  geom_point(data = sens, aes(x = d18l, y = d.excess, fill = RH), shape = 21, size = 3) +
-  scale_fill_distiller(palette = "RdBu") +
-  theme_bw() + theme +
-  labs(x = expression(delta^"18"*"O (\u2030)"),
-       y = expression("d-excess (\u2030)"))
+Medi_numerical(20, 0, 0.4, 11, 1e4)

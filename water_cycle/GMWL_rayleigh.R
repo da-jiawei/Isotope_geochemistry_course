@@ -16,7 +16,7 @@ theme = theme(axis.text.x = element_text(margin = margin(t = 0.1, unit = "cm")),
               panel.grid.major = element_blank())
 
 # read GNIP data ----
-dat = read_xlsx("data/GNIP.xlsx")
+dat = read_xlsx("water_cycle/data/GNIP.xlsx")
 dat2 = dat[, c(12:15, 35, 39)]
 dat.d18 = dat2 %>%
   filter(`Measurand Symbol` == "O18") %>%

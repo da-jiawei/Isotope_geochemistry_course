@@ -1,7 +1,8 @@
 library(tidyverse)
 library(ggpubr)
+library(readxl)
 library(lubridate)
-source('constants_coefficients.R')
+source('water_cycle/constants_coefficients.R')
 theme = theme(axis.text.x = element_text(margin = margin(t = 0.1, unit = "cm")),
               axis.text.y = element_text(margin = margin(r = 0.1, unit = "cm")),
               axis.ticks.length=unit(0.15, "cm"),
@@ -28,8 +29,9 @@ data_grooming = function(dat){
            d.excess = d2 - 8 * d18)
   return(dat)
 }
-dat = read_xlsx("data/GNIP/Waco.xlsx", sheet = 1)
+dat = read_xlsx("water_cycle/data/GNIP/Waco.xlsx", sheet = 1)
 dat = data_grooming(dat)
+
 p1 = ggplot(dat, aes(x = d18, y = d2, fill = month)) +
   geom_abline(slope = 8, intercept = 10) +
   geom_point(shape = 21, size = 3) +
@@ -51,7 +53,7 @@ ctrl = function(){
   vars = list(
     d18o = -5,
     temp = 0,
-    f = 0.5,
+    f = seq(0.1, 1, 0.1),
     w = 0.4,
     h = 0.7
   )
@@ -63,7 +65,7 @@ iwb = function(vars){
   R18o = (d18o/1000 + 1) * R18_VSMOW
   R2o = (d2o/1000 + 1) * R2_VSMOW
   alpha_eq(temp)
-  # assume ambient vapor in isotope equilibrium with rainfall
+  # assume ambient vapor in isotope equilibrium with the initial rainfall
   R18a = R18o / alpha18_l_v 
   R2a = R2o / alpha2_l_v
   diff18 = diffratio_18 * (1 - w) + w
@@ -83,7 +85,6 @@ iwb = function(vars){
   d2f = (R2f / R2_VSMOW - 1) * 1000
   d2v = (R2v / R2_VSMOW - 1) * 1000
   results = data.frame("temp" = rep(temp), "f" = rep(f), "w" = rep(w), "h" = rep(h),
-                       "d18a" = rep(d18a), "d2a" = rep(d2a),
                        "d18f" = rep(d18f), "d2f" = rep(d2f), "d18v" = rep(d18v), "d2v" = rep(d2v))
 }
 
@@ -92,39 +93,37 @@ vars = ctrl()
 dat_s = iwb(vars)
 for (i in 1:5) {
   vars$temp = 5 * (i-1)
-  vars$f = seq(0.1, 1, 0.1)
   results = iwb(vars)
   dat_s = rbind(dat_s, results)
 }
-ggplot(dat_s) +
+p1 = ggplot(dat_s) +
   geom_abline(slope = 8, intercept = 10) +
   geom_point(data = dat, aes(x = d18, y = d2), color = "gray") +
   geom_smooth(data = dat, aes(x = d18, y = d2), method = "lm", linetype = "dashed", se = FALSE) +
-  geom_point(aes(x = d18f, y = d2f, fill = temp), shape = 21, size = 3) +
-  scale_fill_distiller(palette = "RdBu") +
+  geom_line(aes(x = d18f, y = d2f, color = temp, group = temp)) +
+  scale_color_viridis_c(direction = -1) +
   theme_bw() + theme +
   labs(x = expression(delta^"18"*"O (\u2030)"),
        y = expression(delta*"D (\u2030)"),
-       fill = expression(paste("T (", degree, "C)")))
+       color = expression(paste("T (", degree, "C)")))
 # humidity
 vars = ctrl()
 dat_s = iwb(vars)
 for (i in 1:4) {
   vars$h = 0.5 + i/10
-  vars$f = seq(0.1, 1, 0.1)
   results = iwb(vars)
   dat_s = rbind(dat_s, results)
 }
-ggplot(dat_s) +
+p2 = ggplot(dat_s) +
   geom_abline(slope = 8, intercept = 10) +
   geom_point(data = dat, aes(x = d18, y = d2), color = "gray") +
   geom_smooth(data = dat, aes(x = d18, y = d2), method = "lm", linetype = "dashed", se = FALSE) +
-  geom_point(aes(x = d18f, y = d2f, fill = h*100), shape = 21, size = 3) +
-  scale_fill_distiller(palette = "RdBu") +
+  geom_line(aes(x = d18f, y = d2f, color = h*100, group = h)) +
+  scale_color_viridis_c(direction = 1) +
   theme_bw() + theme +
   labs(x = expression(delta^"18"*"O (\u2030)"),
        y = expression(delta*"D (\u2030)"),
-       fill = "RH (%)")
+       color = "RH (%)")
 # turbulence
 vars = ctrl()
 dat_s = iwb(vars)
@@ -134,12 +133,14 @@ for (i in 1:5) {
   results = iwb(vars)
   dat_s = rbind(dat_s, results)
 }
-ggplot(dat_s) +
+p3 = ggplot(dat_s) +
   geom_abline(slope = 8, intercept = 10) +
   geom_point(data = dat, aes(x = d18, y = d2), color = "gray") +
   geom_smooth(data = dat, aes(x = d18, y = d2), method = "lm", linetype = "dashed", se = FALSE) +
-  geom_point(aes(x = d18f, y = d2f, fill = w), shape = 21, size = 3) +
-  scale_fill_distiller(palette = "RdBu") +
+  geom_line(aes(x = d18f, y = d2f, color = w, group = w)) +
+  scale_color_viridis_c(direction = 1) +
   theme_bw() + theme +
   labs(x = expression(delta^"18"*"O (\u2030)"),
        y = expression(delta*"D (\u2030)"))
+
+ggarrange(p1, p2, p3, nrow = 1, ncol = 3, align = "hv")
