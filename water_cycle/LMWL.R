@@ -1,3 +1,7 @@
+cat("\014")
+rm(list = ls())
+gc()
+
 library(tidyverse)
 library(ggpubr)
 library(readxl)
@@ -31,22 +35,57 @@ data_grooming = function(dat){
 }
 dat = read_xlsx("water_cycle/data/GNIP/Waco.xlsx", sheet = 1)
 dat = data_grooming(dat)
+dat = dat %>%
+  mutate(season = ifelse(month>=3&month<=5, "spring", 
+                         ifelse(month<=8, "summer",
+                                ifelse(month<=11, "fall", "winter"))))
+dat$season = factor(dat$season, levels = c("summer", "spring", "fall", "winter"))
 
-p1 = ggplot(dat, aes(x = d18, y = d2, fill = month)) +
+dat_mean = dat %>%
+  group_by(month) %>%
+  summarise(d18.sd = sd(d18),
+            d2.sd = sd(d2),
+            d.excess.sd = sd(d.excess),
+            d18 = mean(d18),
+            d2 = mean(d2),
+            d.excess = mean(d.excess))
+dat_mean$RH = c(72,70,69,68,73,69,62,62,67,69,73,73)
+
+
+p1 = ggplot(dat, aes(x = d18, y = d2)) +
+  geom_point(aes(color = season), shape = 21, size = 3) +
   geom_abline(slope = 8, intercept = 10) +
-  geom_point(shape = 21, size = 3) +
   geom_smooth(method = "lm", linetype = "dashed", se = FALSE) +
-  scale_fill_distiller(palette = "RdBu") +
+  scale_color_brewer(palette = "RdBu") +
   theme_bw() + theme +
   labs(x = expression(delta^"18"*"O (\u2030)"),
        y = expression(delta*"D (\u2030)"))
-p2 = ggplot(dat, aes(x = d18, y = d.excess, fill = month)) +
+p2 = ggplot(dat, aes(x = d18, y = d.excess, color = season)) +
   geom_point(shape = 21, size = 3) +
-  scale_fill_distiller(palette = "RdBu") +
+  geom_abline(slope = 0, intercept = 10) +
+  scale_color_brewer(palette = "RdBu") +
   theme_bw() + theme +
   labs(x = expression(delta^"18"*"O (\u2030)"),
        y = expression("d-excess (\u2030)"))
 ggarrange(p1, p2, nrow = 1, ncol = 2, common.legend = TRUE)
+
+p3 = ggplot(dat_mean, aes(x = month, y = RH)) +
+  geom_line() +
+  geom_point(size = 4, shape = 21, fill = "white") +
+  theme_bw() + theme +
+  scale_x_continuous(breaks = seq(1,12,1)) +
+  scale_y_continuous(limits = c(60,75)) +
+  labs(y = "RH (%)")
+  
+p4 = ggplot(dat_mean, aes(x = month, y = d.excess)) +
+  geom_errorbar(aes(ymin = d.excess - d.excess.sd, ymax = d.excess + d.excess.sd),
+                linewidth = 0.2, width = 0) +
+  geom_line() +
+  geom_point(size = 4, shape = 21, fill = "white") +
+  theme_bw() + theme +
+  scale_x_continuous(breaks = seq(1,12,1)) +
+  labs(y = expression("d-excess (\u2030)"))
+ggarrange(p3, p4, nrow = 2, ncol = 1, heights = c(1.5,2))
 
 # isolated water body model
 ctrl = function(){
